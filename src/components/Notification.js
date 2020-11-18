@@ -3,7 +3,6 @@ import styles from './Notification.module.css';
 import PropTypes from 'prop-types';
 
 function Notification({show, gameOver}) {
-
     return (
         show &&
         <div className={styles.root}>
