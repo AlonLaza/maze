@@ -9,13 +9,13 @@ import mazeTune from './audio/maze.mp3'; //alon
 import levelEndTune from './audio/level_end.mp3'; //alon
 
 
-export const ROUND_TIME = 5; //return to 60 -  alon
+export const ROUND_TIME = 50; //return to 60 -  alon
 const ROWS = 17;
 const COLS = 33;
 const mazeAudio=new Audio(mazeTune); //alon
 mazeAudio.loop=true; //alon*- find the right position to this line
 const levelEndAudio=new Audio(levelEndTune); //alon
-
+const keyArrows = [37,38,39,40];
 
 function reducer(state, action) {
 
@@ -80,6 +80,46 @@ function reducer(state, action) {
                 points: state.points + 10000
             }
         }
+        case 'move': {
+            let newCell=undefined;
+            let points=undefined;
+            switch(action.payload.keyCode){
+                case 37:{
+                    if(!state.maze.cells[state.currentCell[1] + state.currentCell[0] * state.maze.cols][3]
+                        && (!(state.currentCell[0]===0 && state.currentCell[1]===0)))
+                    {
+                        newCell =[state.currentCell[0],state.currentCell[1]-1];
+                    }   
+                    break;
+                }
+                case 38:{
+                    if(!state.maze.cells[state.currentCell[1] + state.currentCell[0] * state.maze.cols][0]){
+
+                        newCell = [state.currentCell[0]-1,state.currentCell[1]];
+                    }
+                    break;
+                }
+                case 39:{
+                    if(!state.maze.cells[state.currentCell[1] + state.currentCell[0] * state.maze.cols][1]){
+                    
+                        newCell = [state.currentCell[0],state.currentCell[1]+1];
+                    }
+                    break;
+                }
+                case 40:{
+                    if(!state.maze.cells[state.currentCell[1] + state.currentCell[0] * state.maze.cols][2]){
+                        newCell = [state.currentCell[0]+1,state.currentCell[1]];
+                    }
+                    break;
+                }
+            }
+
+            return {
+                ...state,
+                currentCell: newCell || state.currentCell,
+                points: newCell ? state.points + 10 : state.points
+            }
+        }
         case 'moveDown': {
             console.log('Down In Reducer')
             return {
@@ -115,7 +155,6 @@ function reducer(state, action) {
 }
 
 function App() {
-    //  console.log('begin of App function.')
     
     const [state, dispatch] = useReducer(reducer, {
         points: 0,
@@ -128,7 +167,6 @@ function App() {
     });
  
 
-    //alon
     const playAudio = ()=>{ 
         const audioPromise = mazeAudio.play()
         if (audioPromise !== undefined) {
@@ -142,9 +180,21 @@ function App() {
             })
         }
     }
-    //alon.
 
-    const handleOnEnterKeyPressed = useCallback(() => {
+    // const handleOnEnterKeyPressed = useCallback(() => {
+    //     if (!state.time) {
+    //         dispatch({
+    //             type: 'startGame',
+    //             payload: {
+    //                 maze: new MazeGenerator(ROWS, COLS).generate()
+    //             }
+
+    //         });            
+    //         playAudio();
+    //     }
+    // }, [state.time]);
+
+    const handleOnEnterKeyPressed =() => {
         if (!state.time) {
             dispatch({
                 type: 'startGame',
@@ -153,12 +203,25 @@ function App() {
                 }
 
             });            
-            playAudio(); //alon
+            playAudio();
         }
-    }, [state.time]);
+    };
+
+    const handleOnArrowKeyPressed = (keyCode) => {
+        console.log(keyCode);
+       // if(state.time!==0 && !state.maze.cells[state.currentCell[1] + state.currentCell[0] * state.maze.cols][2]){
+            if(state.time!==0 && !state.levelEnded ){
+                dispatch({
+                    type: 'move',
+                    payload:{
+                        keyCode: keyCode
+                    }
+                })
+            }   
+        //};
+    };
 
     const handleOnDownKeyPressed = useCallback(() => {
-        
         if(state.time!==0 && !state.maze.cells[state.currentCell[1] + state.currentCell[0] * state.maze.cols][2]){
             dispatch({
                 type: 'moveDown',
@@ -167,7 +230,6 @@ function App() {
     }, [state.time]);
 
     const handleOnRightKeyPressed = useCallback(() => {
-
         if(state.time!==0 && !state.maze.cells[state.currentCell[1] + state.currentCell[0] * state.maze.cols][1]){
             dispatch({
                 type: 'moveRight',
@@ -175,13 +237,15 @@ function App() {
         }
     }, [state.time]);
 
-    const handleOnUpKeyPressed = useCallback(() => {
+    const handleOnUpKeyPressed =() => {
+        console.log('currentCell',state.currentCell);
+
         if(state.time!==0 && !state.maze.cells[state.currentCell[1] + state.currentCell[0] * state.maze.cols][0]){
             dispatch({
                 type: 'moveUp',
             });
         }
-    }, [state.time]);
+    };
 
     const handleOnLeftKeyPressed = useCallback(() => {
         console.log('new',state.currentCell);
@@ -195,22 +259,13 @@ function App() {
 
     useEffect(() => {
         const onKeyDown = e => {
-            if(e.keyCode !== 13){
-            }
+            
             if (e.keyCode === 13) {
                 handleOnEnterKeyPressed();
             }
-            else if (e.keyCode===37) { 
-                handleOnLeftKeyPressed();
-            }
-            else if (e.keyCode===38) { 
-                handleOnUpKeyPressed();
-            }
-            else if (e.keyCode===39) { 
-                handleOnRightKeyPressed();
-            }
-            else if (e.keyCode===40) { 
-                handleOnDownKeyPressed();
+            else if (keyArrows.includes(e.keyCode)) { 
+                
+                handleOnArrowKeyPressed(e.keyCode);
             }
         };
         window.addEventListener('keydown', onKeyDown);
@@ -247,8 +302,6 @@ function App() {
     }, [state.currentCell]);
 
     
-
-
     return (
         <div className={styles.root}>
             <Header

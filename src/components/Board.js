@@ -95,7 +95,7 @@ function Board({ maze, currentCell, time, dispatch }) {
                     }
                 }
             }
-
+            //console.log('inBoard',currentCell);
             const logoSize = 0.75 * Math.min(blockWidth, blockHeight);
             const image = new Image(logoSize, logoSize);
             image.onload = () => {
