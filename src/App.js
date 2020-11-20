@@ -6,15 +6,20 @@ import Notification from './components/Notification';
 import MazeGenerator from './maze/MazeGenerator';
 import Board from './components/Board';
 import mazeTune from './audio/maze.mp3'; //alon
+import levelEndTune from './audio/level_end.mp3'; //alon
 
-const ROUND_TIME = 60; //return to 60 -  alon
+
+export const ROUND_TIME = 5; //return to 60 -  alon
 const ROWS = 17;
 const COLS = 33;
 const mazeAudio=new Audio(mazeTune); //alon
 mazeAudio.loop=true; //alon*- find the right position to this line
+const levelEndAudio=new Audio(levelEndTune); //alon
 
 
 function reducer(state, action) {
+
+    // console.log('action.type',action.type);
     switch (action.type) {
         case 'startGame': {
             return {
@@ -30,18 +35,88 @@ function reducer(state, action) {
                 time: state.time - 1
             };
         }
-        case 'endGame': {
+        case 'gameOver': {
             return {
                 ...state,
-                hiScore: Math.max(state.hiScore, state.points)
+                hiScore: Math.max(state.hiScore, state.points),
             }
         }
+        case 'levelEnded': {
+            return {
+                ...state,
+                levelEnded: true
+            }
+        }
+        case 'nextRound': {
+            const points = state.points + (state.round * state.time * 100);
+            return {
+                ...state,
+                hiScore: Math.max(state.hiScore, points),
+                time:Math.max(ROUND_TIME, state.time),
+                currentCell:[0,0],
+                round: state.round + 1,
+                points: 0,
+                maze: action.payload.maze,
+                levelEnded:false    
+            }
+        }
+        case 'pauseTime': {
+            return {
+                ...state,
+                time: null
+            };
+        }
+        case 'hitLollipop': {
+            return {
+                ...state,
+                time: state.time + 15,
+                points: state.points + 5000
+            }
+        }
+        case 'hitIceCream': {
+            return {
+                ...state,
+                time: state.time + 30,
+                points: state.points + 10000
+            }
+        }
+        case 'moveDown': {
+            console.log('Down In Reducer')
+            return {
+                ...state,
+                currentCell: [state.currentCell[0]+1,state.currentCell[1]],
+                points:state.points+10
+            }
+        }
+        case 'moveRight': {
+            return {
+                ...state,
+                currentCell: [state.currentCell[0],state.currentCell[1]+1],
+                points:state.points+10
+            }
+        }
+        case 'moveUp': {
+            return {
+                ...state,
+                currentCell: [state.currentCell[0]-1,state.currentCell[1]],
+                points:state.points+10
+            }
+        }            
+        case 'moveLeft': {
+            return {
+                ...state,
+                currentCell: [state.currentCell[0],state.currentCell[1]-1],
+                points:state.points+10
+            }
+        }  
         default:
             throw new Error("Unknown action");
     }
 }
 
 function App() {
+    //  console.log('begin of App function.')
+    
     const [state, dispatch] = useReducer(reducer, {
         points: 0,
         round: 1,
@@ -49,7 +124,9 @@ function App() {
         time: undefined,
         maze: undefined,
         currentCell: undefined,
+        levelEnded:false
     });
+ 
 
     //alon
     const playAudio = ()=>{ 
@@ -74,37 +151,102 @@ function App() {
                 payload: {
                     maze: new MazeGenerator(ROWS, COLS).generate()
                 }
-            });
+
+            });            
             playAudio(); //alon
+        }
+    }, [state.time]);
 
+    const handleOnDownKeyPressed = useCallback(() => {
+        
+        if(state.time!==0 && !state.maze.cells[state.currentCell[1] + state.currentCell[0] * state.maze.cols][2]){
+            dispatch({
+                type: 'moveDown',
+            })
+        };
+    }, [state.time]);
 
+    const handleOnRightKeyPressed = useCallback(() => {
+
+        if(state.time!==0 && !state.maze.cells[state.currentCell[1] + state.currentCell[0] * state.maze.cols][1]){
+            dispatch({
+                type: 'moveRight',
+            });
+        }
+    }, [state.time]);
+
+    const handleOnUpKeyPressed = useCallback(() => {
+        if(state.time!==0 && !state.maze.cells[state.currentCell[1] + state.currentCell[0] * state.maze.cols][0]){
+            dispatch({
+                type: 'moveUp',
+            });
+        }
+    }, [state.time]);
+
+    const handleOnLeftKeyPressed = useCallback(() => {
+        console.log('new',state.currentCell);
+        if(state.time!==0 && !state.maze.cells[state.currentCell[1] + state.currentCell[0] * state.maze.cols][3]
+            && (!(state.currentCell[0]===0&&state.currentCell[1]===0))){
+            dispatch({
+                type: 'moveLeft',
+            });
         }
     }, [state.time]);
 
     useEffect(() => {
         const onKeyDown = e => {
+            if(e.keyCode !== 13){
+            }
             if (e.keyCode === 13) {
                 handleOnEnterKeyPressed();
+            }
+            else if (e.keyCode===37) { 
+                handleOnLeftKeyPressed();
+            }
+            else if (e.keyCode===38) { 
+                handleOnUpKeyPressed();
+            }
+            else if (e.keyCode===39) { 
+                handleOnRightKeyPressed();
+            }
+            else if (e.keyCode===40) { 
+                handleOnDownKeyPressed();
             }
         };
         window.addEventListener('keydown', onKeyDown);
         return () => {
             window.removeEventListener('keydown', onKeyDown);
         }
+        
     }, [handleOnEnterKeyPressed]);
 
     useInterval(() => {
         dispatch({type: 'decrementTime'})
-    }, state.time ? 1000 : null);
+    }, (state.time && !state.levelEnded)  ? 1000 : null);
 
     useEffect(() => {
         if (state.time === 0) {
-            dispatch({type: 'endGame'});
-            mazeAudio.load(); //alon
-
+            dispatch({type: 'gameOver'});
+            mazeAudio.load();
         }
     }, [state.time]);
 
+    useEffect(() => {
+        if (state.maze && state.currentCell[0] === state.maze.endCell[0] && state.currentCell[1] === state.maze.endCell[1] ) {
+            dispatch({type: 'levelEnded'});
+            mazeAudio.load();
+            levelEndAudio.play();
+            levelEndAudio.onended = function(){
+                dispatch({type: 'nextRound',
+                payload: {
+                    maze: new MazeGenerator(ROWS, COLS).generate(),
+                }});
+                mazeAudio.play();
+              }
+        }
+    }, [state.currentCell]);
+
+    
 
 
     return (
@@ -118,6 +260,8 @@ function App() {
             <Board
                 maze={state.maze}
                 currentCell={state.currentCell}
+                time={state.time}
+                dispatch={dispatch}
             />
             <Notification
                 show={!state.time}

@@ -2,11 +2,46 @@ import React, { useEffect, useRef, useState } from 'react';
 import styles from './Board.module.css';
 import PropTypes from 'prop-types';
 import logoImage from '../logo.svg';
+import lollipopImage from '../images/lollipop.svg';
+import iceCreamImage from '../images/ice_cream.svg';
 
-function Board({ maze, currentCell }) {
+
+
+import {ROUND_TIME} from '../App.js';
+function Board({ maze, currentCell, time, dispatch }) {
     const canvas = useRef(null);
     const container = useRef(null);
     const [ctx, setCtx] = useState(undefined);
+    const [lollipopObj, setLollipopObj] = useState({
+        firstCreated:false,
+        show:false,
+        col:undefined,
+        row:undefined,
+        showPtsCounter:undefined,
+    });
+    const [iceCreamObj, setIceCreamObj] = useState({
+        firstCreated:false,
+        show:false,
+        col:undefined,
+        row:undefined,
+        showPtsCounter:undefined
+    });
+
+
+    useEffect(() => {
+        if(maze){
+            setLollipopObj(iceCreamObj => {
+                return { ...iceCreamObj, col:0,row:2 }
+              });
+
+            //setLollipopObj({...lollipopObj,col:0});
+            setIceCreamObj({...iceCreamObj,col:0,row:3});
+            //setLollipopCell([ Math.floor(Math.random()*maze.cols), Math.floor(Math.random()*maze.rows)]);
+           
+           
+            //setIceCreamCell([ Math.floor(Math.random()*maze.cols), Math.floor(Math.random()*maze.rows)]);
+        }
+    },[maze]);
 
     useEffect(() => {
         const fitToContainer = () => {
@@ -19,6 +54,7 @@ function Board({ maze, currentCell }) {
 
         setCtx(canvas.current.getContext('2d'));
         setTimeout(fitToContainer, 0);
+
     }, []);
 
     useEffect(() => {
@@ -63,7 +99,7 @@ function Board({ maze, currentCell }) {
             const logoSize = 0.75 * Math.min(blockWidth, blockHeight);
             const image = new Image(logoSize, logoSize);
             image.onload = () => {
-                ctx.drawImage(image, currentCell[0] * blockWidth + xOffset + (blockWidth - logoSize) / 2, currentCell[1] * blockHeight + (blockHeight - logoSize) / 2, logoSize, logoSize);
+                ctx.drawImage(image, currentCell[1] * blockWidth + xOffset + (blockWidth - logoSize) / 2, currentCell[0] * blockHeight + (blockHeight - logoSize) / 2, logoSize, logoSize);
             };
 
             image.src = logoImage;
@@ -72,12 +108,88 @@ function Board({ maze, currentCell }) {
             ctx.fillStyle = 'red';
             ctx.font = '20px "Joystix"';
             ctx.textBaseline = 'top';
-            ctx.fillText('Goal', maze.endCell[1] * blockWidth + xOffset + (blockWidth - textSize) / 2, maze.endCell[0] * blockHeight + (blockHeight - textSize) / 2, textSize)
+            if(time%2==0){ //make the "GOAL" blinking every even second.
+                ctx.fillText('Goal', maze.endCell[1] * blockWidth + xOffset + (blockWidth - textSize) / 2, maze.endCell[0] * blockHeight + (blockHeight - textSize) / 2, textSize)
+            }
+            
+           
+
+            //show lollipop logo
+            if((time===ROUND_TIME-3 && !lollipopObj.firstCreated) || lollipopObj.show ){ //alon* - should be 30!
+                if(!lollipopObj.firstCreated){
+                    setLollipopObj(lollipopObj => {
+                        return { ...lollipopObj, firstCreated:true, show:true }
+                      });        
+                }    
+                if(lollipopObj.col===currentCell[1] && lollipopObj.row===currentCell[0] && lollipopObj.show){
+                    setLollipopObj(lollipopObj => {
+                        return { ...lollipopObj,show:false,hitTime:time, showPtsCounter: 3}
+                      });
+                    dispatch({
+                        type: 'hitLollipop',
+                    }); 
+                }
+                else{
+                    const lollipopSize = 0.75 * Math.min(blockWidth, blockHeight);
+                    const lollipop = new Image(lollipopSize, lollipopSize);
+                    lollipop.onload = () => {
+                        ctx.drawImage(lollipop, lollipopObj.col * blockWidth + xOffset + (blockWidth - lollipopSize) / 2, lollipopObj.row * blockHeight + (blockHeight - lollipopSize) / 2, lollipopSize, lollipopSize);
+                    };
+                    lollipop.src = lollipopImage;
+                }
+            }
+             //show lollipop Points text for 3 seconds
+             if(lollipopObj.showPtsCounter>=0){
+                ctx.fillText('+5000', (lollipopObj.col) * blockWidth + xOffset + (blockWidth - textSize) / 2, (lollipopObj.row) * blockHeight + (blockHeight - textSize) / 2, textSize)  
+            }
+           //show iceCream logo
+            if((time===28 && !iceCreamObj.firstCreated) || iceCreamObj.show){
+                if(!iceCreamObj.firstCreated){
+                    setIceCreamObj(iceCreamObj => {
+                        return { ...iceCreamObj, firstCreated:true, show:true }
+                      }); 
+                }
+                if(iceCreamObj.col===currentCell[1] && iceCreamObj.row===currentCell[0] && iceCreamObj.show){
+                    setIceCreamObj(iceCreamObj => {
+                        return { ...iceCreamObj, show:false,  showPtsCounter: 3 }
+                      }); 
+                    dispatch({
+                        type: 'hitIceCream',
+                    }); 
+                }
+                else{
+                    const iceCreamSize = 0.75 * Math.min(blockWidth, blockHeight);
+                    const iceCream = new Image(iceCreamSize, iceCreamSize);
+                    iceCream.onload = () => {
+                        ctx.drawImage(iceCream, iceCreamObj.col * blockWidth + xOffset + (blockWidth - iceCreamSize) / 2, iceCreamObj.row * blockHeight + (blockHeight - iceCreamSize) / 2, iceCreamSize, iceCreamSize);
+                    };
+                    iceCream.src = iceCreamImage;
+                }
+            }
+
+             //show iceCream Points text for 3 seconds
+             if(iceCreamObj.showPtsCounter>=0){
+                ctx.fillText('+10000', (iceCreamObj.col) * blockWidth + xOffset + (blockWidth - textSize) / 2, (iceCreamObj.row) * blockHeight + (blockHeight - textSize) / 2, textSize)
+            }
         };
 
         draw();
-    }, [ctx, currentCell, maze]);
+    }, [ctx, currentCell, maze, time]);
 
+    useEffect(()=>{
+        if(lollipopObj.showPtsCounter>=0){
+            setLollipopObj(lollipopObj => {
+                return { ...lollipopObj,showPtsCounter:lollipopObj.showPtsCounter-1 }
+              });    
+        }
+
+        if(iceCreamObj.showPtsCounter>=0){
+            setIceCreamObj(iceCreamObj => {
+                return { ...iceCreamObj,showPtsCounter:iceCreamObj.showPtsCounter-1 }
+              });    
+        }
+    },[time]);
+    
     return (
         <div
             className={styles.root}

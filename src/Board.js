@@ -4,6 +4,7 @@ import PropTypes from 'prop-types';
 import logoImage from '../logo.svg';
 
 function Board({ maze, currentCell }) {
+    console.log('Begin Board Component');
     const canvas = useRef(null);
     const container = useRef(null);
     const [ctx, setCtx] = useState(undefined);
