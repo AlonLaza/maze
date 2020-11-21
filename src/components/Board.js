@@ -6,8 +6,6 @@ import lollipopImage from '../images/lollipop.svg';
 import iceCreamImage from '../images/ice_cream.svg';
 
 
-
-import {ROUND_TIME} from '../App.js';
 function Board({ maze, currentCell, time, dispatch, finishLevel }) {
     const canvas = useRef(null);
     const container = useRef(null);
@@ -18,36 +16,38 @@ function Board({ maze, currentCell, time, dispatch, finishLevel }) {
         col:undefined,
         row:undefined,
         showPtsCounter:undefined,
+        timeToShow:undefined
     });
     const [iceCreamObj, setIceCreamObj] = useState({
         firstCreated:false,
         show:false,
         col:undefined,
         row:undefined,
-        showPtsCounter:undefined
+        showPtsCounter:undefined,
+        timeToShow:15
     });
 
 
-    useEffect(() => {
+    useEffect(() => { //every new maze, initalize the prizes
         if(maze){
             setLollipopObj(lollipopObj => {
-                return { ...lollipopObj, firstCreated:false,
-                    show:false,
-                    col: 30,
-                    row:14,
-                    showPtsCounter:undefined,}
+                return { ...lollipopObj,
+                    firstCreated: false,
+                    show: false,
+                    col: Math.floor(Math.random()*maze.cols),
+                    row: Math.floor(Math.random()*maze.rows),
+                    showPtsCounter: undefined,
+                    timeToShow:time - 30
+                }
               });
-
-            //setLollipopObj({...lollipopObj,col:0});
-            setIceCreamObj({...iceCreamObj,firstCreated:false,
+            setIceCreamObj({...iceCreamObj,
+                firstCreated: false,
                 show:false,
-                col:0,
-                row:3,
-                showPtsCounter:undefined});
-            //setLollipopCell([ Math.floor(Math.random()*maze.cols), Math.floor(Math.random()*maze.rows)]);
-           
-           
-            //setIceCreamCell([ Math.floor(Math.random()*maze.cols), Math.floor(Math.random()*maze.rows)]);
+                col: Math.floor(Math.random()*maze.cols),
+                row: Math.floor(Math.random()*maze.rows),
+                showPtsCounter: undefined,
+                timeToShow: 15
+            });
         }
     },[maze,finishLevel]);
 
@@ -110,20 +110,17 @@ function Board({ maze, currentCell, time, dispatch, finishLevel }) {
             };
 
             image.src = logoImage;
-
             const textSize = Math.min(blockWidth, blockHeight);
             ctx.fillStyle = 'red';
             ctx.font = '20px "Joystix"';
             ctx.textBaseline = 'top';
+
             if(time%2==0){ //make the "GOAL" blinking every even second.
                 ctx.fillText('Goal', maze.endCell[1] * blockWidth + xOffset + (blockWidth - textSize) / 2, maze.endCell[0] * blockHeight + (blockHeight - textSize) / 2, textSize)
             }
-            
-           
 
             //show lollipop logo
-            if((time===ROUND_TIME-3 && !lollipopObj.firstCreated) || lollipopObj.show ){ //alon* - should be 30!
-
+            if((time===lollipopObj.timeToShow && !lollipopObj.firstCreated) || lollipopObj.show ){ //alon* - should be 30!
                 if(!lollipopObj.firstCreated){
                     setLollipopObj(lollipopObj => {
                         return { ...lollipopObj, firstCreated:true, show:true }
@@ -131,7 +128,7 @@ function Board({ maze, currentCell, time, dispatch, finishLevel }) {
                 }    
                 if(lollipopObj.col===currentCell[1] && lollipopObj.row===currentCell[0] && lollipopObj.show){
                     setLollipopObj(lollipopObj => {
-                        return { ...lollipopObj,show:false,hitTime:time, showPtsCounter: 3}
+                        return { ...lollipopObj,show:false, showPtsCounter: 3}
                       });
                     dispatch({
                         type: 'hitLollipop',
@@ -146,12 +143,13 @@ function Board({ maze, currentCell, time, dispatch, finishLevel }) {
                     lollipop.src = lollipopImage;
                 }
             }
-             //show lollipop Points text for 3 seconds
+             //show lollipop Points
              if(lollipopObj.showPtsCounter>=0){
                 ctx.fillText('+5000', (lollipopObj.col) * blockWidth + xOffset + (blockWidth - textSize) / 2, (lollipopObj.row) * blockHeight + (blockHeight - textSize) / 2, textSize)  
             }
+
            //show iceCream logo
-            if((time===28 && !iceCreamObj.firstCreated) || iceCreamObj.show){
+            if((time===iceCreamObj.timeToShow && !iceCreamObj.firstCreated) || iceCreamObj.show){
                 if(!iceCreamObj.firstCreated){
                     setIceCreamObj(iceCreamObj => {
                         return { ...iceCreamObj, firstCreated:true, show:true }
@@ -164,6 +162,11 @@ function Board({ maze, currentCell, time, dispatch, finishLevel }) {
                     dispatch({
                         type: 'hitIceCream',
                     }); 
+                    if(!lollipopObj.firstCreated){ //if the *lollipop* never created, update the time to show the lollipop
+                        setLollipopObj(lollipopObj => {
+                            return { ...lollipopObj, timeToShow: lollipopObj.timeToShow + 30 }
+                          }); 
+                    }
                 }
                 else{
                     const iceCreamSize = 0.75 * Math.min(blockWidth, blockHeight);
@@ -174,8 +177,7 @@ function Board({ maze, currentCell, time, dispatch, finishLevel }) {
                     iceCream.src = iceCreamImage;
                 }
             }
-
-             //show iceCream Points text for 3 seconds
+            //show IceCream points
              if(iceCreamObj.showPtsCounter>=0){
                 ctx.fillText('+10000', (iceCreamObj.col) * blockWidth + xOffset + (blockWidth - textSize) / 2, (iceCreamObj.row) * blockHeight + (blockHeight - textSize) / 2, textSize)
             }
@@ -184,7 +186,7 @@ function Board({ maze, currentCell, time, dispatch, finishLevel }) {
         draw();
     }, [ctx, currentCell, maze, time]);
 
-    useEffect(()=>{
+    useEffect(()=>{ //stop showing the points after 3 seconds
         if(lollipopObj.showPtsCounter>=0){
             setLollipopObj(lollipopObj => {
                 return { ...lollipopObj,showPtsCounter:lollipopObj.showPtsCounter-1 }

@@ -5,16 +5,16 @@ import Header from './components/Header';
 import Notification from './components/Notification';
 import MazeGenerator from './maze/MazeGenerator';
 import Board from './components/Board';
-import mazeTune from './audio/maze.mp3'; //alon
-import levelEndTune from './audio/level_end.mp3'; //alon
+import mazeTune from './audio/maze.mp3';
+import levelEndTune from './audio/level_end.mp3';
 
 
-export const ROUND_TIME = 10; //return to 60 -  alon
-const ROWS = 17;
-const COLS = 33;
-const mazeAudio=new Audio(mazeTune); //alon
-mazeAudio.loop=true; //alon*- find the right position to this line
-const levelEndAudio=new Audio(levelEndTune); //alon
+const ROUND_TIME = 20; //was 60
+const ROWS = 3; //was 17
+const COLS = 5; //was 33
+const mazeAudio=new Audio(mazeTune);
+mazeAudio.loop=true;
+const levelEndAudio=new Audio(levelEndTune);
 const keyArrows = [37,38,39,40];
 
 function reducer(state, action) {
@@ -41,15 +41,12 @@ function reducer(state, action) {
             }
         }
         case 'finishLevel': {
-            console.log('aaaaaaa');
             return {
                 ...state,
                 finishLevel: true,
             }
         }
         case 'nextRound': {
-            console.log('ccccccc',state.finishLevel);
-
             const points = state.points + (state.round * state.time * 100);
             return {
                 ...state,
@@ -59,7 +56,7 @@ function reducer(state, action) {
                 round: state.round + 1,
                 points: 0,
                 maze: action.payload.maze,
-                //finishLevel:false    
+                finishLevel:false    
             }
         }
         case 'hitLollipop': {
@@ -77,9 +74,10 @@ function reducer(state, action) {
             }
         }
         case 'move': {
+            if(state.finishLevel) {return state;} //to freeze the logo after finish round.
             let newCell=undefined;
             switch(action.payload.keyCode){
-                case 37:{
+                case 37:{ //LEFT
                     if(!state.maze.cells[state.currentCell[1] + state.currentCell[0] * state.maze.cols][3]
                         && (!(state.currentCell[0]===0 && state.currentCell[1]===0)))
                     {
@@ -87,19 +85,19 @@ function reducer(state, action) {
                     }   
                     break;
                 }
-                case 38:{
+                case 38:{ //UP
                     if(!state.maze.cells[state.currentCell[1] + state.currentCell[0] * state.maze.cols][0]){
                         newCell = [state.currentCell[0]-1,state.currentCell[1]];
                     }
                     break;
                 }
-                case 39:{
+                case 39:{ //RIGHT
                     if(!state.maze.cells[state.currentCell[1] + state.currentCell[0] * state.maze.cols][1]){
                         newCell = [state.currentCell[0],state.currentCell[1]+1];
                     }
                     break;
                 }
-                case 40:{
+                case 40:{ //DOWN
                     if(!state.maze.cells[state.currentCell[1] + state.currentCell[0] * state.maze.cols][2]){
                         newCell = [state.currentCell[0]+1,state.currentCell[1]];
                     }
@@ -155,38 +153,7 @@ function App() {
         }
     }, [state.time]);
 
-
-
-    // const handleOnEnterKeyPressed =() => {
-    //     if (!state.time) {
-    //         dispatch({
-    //             type: 'startGame',
-    //             payload: {
-    //                 maze: new MazeGenerator(ROWS, COLS).generate()
-    //             }
-
-    //         });            
-    //         playAudio(mazeAudio);
-    //     }
-    // };
-    // console.log(handleOnEnterKeyPressed.name);
-    
-
-    // const handleOnArrowKeyPressed = (keyCode) => {
-    //         if(state.time!==0 && !state.finishLevel ){
-    //             dispatch({
-    //                 type: 'move',
-    //                 payload:{
-    //                     keyCode: keyCode
-    //                 }
-    //             })
-    //         }   
-    // };
-
     const handleOnArrowKeyPressed = useCallback((keyCode) => {
-        console.log('state.finishLevel',state.finishLevel);
-        console.log('state.points',state.points);
-
         if(state.time!==0 && !state.finishLevel ){
             dispatch({
                 type: 'move',
@@ -199,7 +166,6 @@ function App() {
 
     useEffect(() => {
         const onKeyDown = e => {
-            
             if (e.keyCode === 13) {
                 handleOnEnterKeyPressed();
             }
@@ -227,16 +193,16 @@ function App() {
 
     useEffect(() => {
         if (state.maze && state.currentCell[0] === state.maze.endCell[0] && state.currentCell[1] === state.maze.endCell[1] ) {
-            dispatch({type: 'finishLevel'});
+            dispatch({type: 'finishLevel'}); //stop time and freeze logo
             mazeAudio.load();
             playAudio(levelEndAudio);
             levelEndAudio.onended = function(){
-                dispatch({type: 'nextRound',
-                payload: {
-                    maze: new MazeGenerator(ROWS, COLS).generate(),
-                }});
+                dispatch({
+                    type: 'nextRound',
+                    payload: {
+                        maze: new MazeGenerator(ROWS, COLS).generate(),
+                    }});
                 playAudio(mazeAudio);
-                
               }
         }
     }, [state.currentCell]);
@@ -255,7 +221,7 @@ function App() {
                 currentCell={state.currentCell}
                 time={state.time}
                 dispatch={dispatch}
-                finishLevel={state.finishLevel}
+                finishLevel={state.finishLevel || state.time===0}
             />
             <Notification
                 show={!state.time}
