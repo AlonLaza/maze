@@ -10,7 +10,9 @@ function Board({ maze, currentCell, time, dispatch, finishLevel }) {
     const canvas = useRef(null);
     const container = useRef(null);
     const blockRef = useRef({});
-    const logoRef = useRef({});
+    const logoDrawer = useRef({});
+    const lollipopDrawer = useRef({});
+    const iceCreamDrawer = useRef({});
 
     const [ctx, setCtx] = useState(undefined);
     const [lollipopObj, setLollipopObj] = useState({});
@@ -18,7 +20,6 @@ function Board({ maze, currentCell, time, dispatch, finishLevel }) {
     
 
     useEffect(() => { //every new maze, initalize the prizes and the drawing constants
-        console.log('only ONce')
         if(maze){
             setLollipopObj(
                 {
@@ -45,16 +46,27 @@ function Board({ maze, currentCell, time, dispatch, finishLevel }) {
              blockRef.current.blockWidth = Math.floor(canvas.current.width / maze.cols);
              blockRef.current.blockHeight = Math.floor(canvas.current.height / maze.rows);
              blockRef.current.xOffset = Math.floor((canvas.current.width - maze.cols * blockRef.current.blockWidth) / 2);
-            
              const {blockWidth, blockHeight, xOffset} = blockRef.current;
              const logoSize = 0.75 * Math.min(blockWidth, blockHeight);
-             logoRef.current.logoSize= logoSize;
-             logoRef.current.image = new Image(logoSize, logoSize);
-             logoRef.current.image.onload = () => {
-                 ctx.drawImage(logoRef.current.image, currentCell[1] * blockWidth + xOffset + (blockWidth - logoSize) / 2, currentCell[0] * blockHeight + (blockHeight - logoSize) / 2, logoSize, logoSize);
-             };
-            logoRef.current.image.src = logoImage;
-            logoRef.current.draw = (currentCell)=>{console.log('current',currentCell);ctx.drawImage(logoRef.current.image, currentCell[1] * blockWidth + xOffset + (blockWidth - logoSize) / 2, currentCell[0] * blockHeight + (blockHeight - logoSize) / 2, logoSize, logoSize)};
+            
+             const initiateDrawer = (drawerRef, imageSrc, showOnLoad) =>{
+                drawerRef.logoSize=  logoSize; 
+                drawerRef.image  = new Image(logoSize, logoSize);
+                if(showOnLoad){
+                    drawerRef.image.onload = () => {
+                        ctx.drawImage(drawerRef.image, currentCell[1] * blockWidth + xOffset + (blockWidth - logoSize) / 2, currentCell[0] * blockHeight + (blockHeight - logoSize) / 2, logoSize, logoSize);
+                    };
+                }
+                drawerRef.image.src=imageSrc;
+                drawerRef.draw = (currentCell)=>{console.log('current',currentCell);ctx.drawImage(drawerRef.image, currentCell[1] * blockWidth + xOffset + (blockWidth - logoSize) / 2, currentCell[0] * blockHeight + (blockHeight - logoSize) / 2, logoSize, logoSize)};
+
+             }
+
+             initiateDrawer(logoDrawer.current, logoImage,true);
+             initiateDrawer(lollipopDrawer.current, lollipopImage,false);
+             initiateDrawer(iceCreamDrawer.current, iceCreamImage,false);
+             
+             
 
 
         }
@@ -90,10 +102,7 @@ function Board({ maze, currentCell, time, dispatch, finishLevel }) {
             ctx.fillRect(0, 0, canvas.current.width, canvas.current.height);
 
             const {blockWidth,blockHeight,xOffset} = blockRef.current;
-           /* const blockWidth = Math.floor(canvas.current.width / maze.cols);
-            const blockHeight = Math.floor(canvas.current.height / maze.rows);
-            const xOffset = Math.floor((canvas.current.width - maze.cols * blockWidth) / 2);
-*/
+
             for (let y = 0; y < maze.rows; y++) {
                 for (let x = 0; x < maze.cols; x++) {
                     const cell = maze.cells[x + y * maze.cols];
@@ -112,7 +121,7 @@ function Board({ maze, currentCell, time, dispatch, finishLevel }) {
                 }
             }
             //drawing the logo
-            logoRef.current.draw(currentCell);
+            logoDrawer.current.draw(currentCell);
             
             const textSize = Math.min(blockWidth, blockHeight);
             ctx.fillStyle = 'red';
@@ -138,13 +147,8 @@ function Board({ maze, currentCell, time, dispatch, finishLevel }) {
                         type: 'hitLollipop',
                     }); 
                 }
-                else{
-                    const lollipopSize = 0.75 * Math.min(blockWidth, blockHeight);
-                    const lollipop = new Image(lollipopSize, lollipopSize);
-                    lollipop.onload = () => {
-                        ctx.drawImage(lollipop, lollipopObj.col * blockWidth + xOffset + (blockWidth - lollipopSize) / 2, lollipopObj.row * blockHeight + (blockHeight - lollipopSize) / 2, lollipopSize, lollipopSize);
-                    };
-                    lollipop.src = lollipopImage;
+                else{ //draw the lollipop image
+                    lollipopDrawer.current.draw([lollipopObj.row,lollipopObj.col]);
                 }
             }
              //show lollipop Points
@@ -172,13 +176,8 @@ function Board({ maze, currentCell, time, dispatch, finishLevel }) {
                           }); 
                     }
                 }
-                else{
-                    const iceCreamSize = 0.75 * Math.min(blockWidth, blockHeight);
-                    const iceCream = new Image(iceCreamSize, iceCreamSize);
-                    iceCream.onload = () => {
-                        ctx.drawImage(iceCream, iceCreamObj.col * blockWidth + xOffset + (blockWidth - iceCreamSize) / 2, iceCreamObj.row * blockHeight + (blockHeight - iceCreamSize) / 2, iceCreamSize, iceCreamSize);
-                    };
-                    iceCream.src = iceCreamImage;
+                else{ //draw the iceCream image
+                    iceCreamDrawer.current.draw([iceCreamObj.row,iceCreamObj.col]);
                 }
             }
             //show IceCream points
