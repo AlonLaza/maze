@@ -8,7 +8,7 @@ import iceCreamImage from '../images/ice_cream.svg';
 
 
 import {ROUND_TIME} from '../App.js';
-function Board({ maze, currentCell, time, dispatch }) {
+function Board({ maze, currentCell, time, dispatch, finishLevel }) {
     const canvas = useRef(null);
     const container = useRef(null);
     const [ctx, setCtx] = useState(undefined);
@@ -30,18 +30,26 @@ function Board({ maze, currentCell, time, dispatch }) {
 
     useEffect(() => {
         if(maze){
-            setLollipopObj(iceCreamObj => {
-                return { ...iceCreamObj, col:0,row:2 }
+            setLollipopObj(lollipopObj => {
+                return { ...lollipopObj, firstCreated:false,
+                    show:false,
+                    col: 30,
+                    row:14,
+                    showPtsCounter:undefined,}
               });
 
             //setLollipopObj({...lollipopObj,col:0});
-            setIceCreamObj({...iceCreamObj,col:0,row:3});
+            setIceCreamObj({...iceCreamObj,firstCreated:false,
+                show:false,
+                col:0,
+                row:3,
+                showPtsCounter:undefined});
             //setLollipopCell([ Math.floor(Math.random()*maze.cols), Math.floor(Math.random()*maze.rows)]);
            
            
             //setIceCreamCell([ Math.floor(Math.random()*maze.cols), Math.floor(Math.random()*maze.rows)]);
         }
-    },[maze]);
+    },[maze,finishLevel]);
 
     useEffect(() => {
         const fitToContainer = () => {
@@ -95,7 +103,6 @@ function Board({ maze, currentCell, time, dispatch }) {
                     }
                 }
             }
-            //console.log('inBoard',currentCell);
             const logoSize = 0.75 * Math.min(blockWidth, blockHeight);
             const image = new Image(logoSize, logoSize);
             image.onload = () => {
@@ -116,6 +123,7 @@ function Board({ maze, currentCell, time, dispatch }) {
 
             //show lollipop logo
             if((time===ROUND_TIME-3 && !lollipopObj.firstCreated) || lollipopObj.show ){ //alon* - should be 30!
+
                 if(!lollipopObj.firstCreated){
                     setLollipopObj(lollipopObj => {
                         return { ...lollipopObj, firstCreated:true, show:true }

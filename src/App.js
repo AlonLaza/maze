@@ -9,7 +9,7 @@ import mazeTune from './audio/maze.mp3'; //alon
 import levelEndTune from './audio/level_end.mp3'; //alon
 
 
-export const ROUND_TIME = 50; //return to 60 -  alon
+export const ROUND_TIME = 10; //return to 60 -  alon
 const ROWS = 17;
 const COLS = 33;
 const mazeAudio=new Audio(mazeTune); //alon
@@ -18,15 +18,14 @@ const levelEndAudio=new Audio(levelEndTune); //alon
 const keyArrows = [37,38,39,40];
 
 function reducer(state, action) {
-
-    // console.log('action.type',action.type);
     switch (action.type) {
         case 'startGame': {
             return {
                 ...state,
                 maze: action.payload.maze,
                 currentCell: action.payload.maze.startCell,
-                time: ROUND_TIME
+                time: ROUND_TIME,
+                points: 0
             };
         }
         case 'decrementTime': {
@@ -38,16 +37,19 @@ function reducer(state, action) {
         case 'gameOver': {
             return {
                 ...state,
-                hiScore: Math.max(state.hiScore, state.points),
+                hiScore: Math.max(state.hiScore, state.points),     
             }
         }
-        case 'levelEnded': {
+        case 'finishLevel': {
+            console.log('aaaaaaa');
             return {
                 ...state,
-                levelEnded: true
+                finishLevel: true,
             }
         }
         case 'nextRound': {
+            console.log('ccccccc',state.finishLevel);
+
             const points = state.points + (state.round * state.time * 100);
             return {
                 ...state,
@@ -57,14 +59,8 @@ function reducer(state, action) {
                 round: state.round + 1,
                 points: 0,
                 maze: action.payload.maze,
-                levelEnded:false    
+                //finishLevel:false    
             }
-        }
-        case 'pauseTime': {
-            return {
-                ...state,
-                time: null
-            };
         }
         case 'hitLollipop': {
             return {
@@ -82,7 +78,6 @@ function reducer(state, action) {
         }
         case 'move': {
             let newCell=undefined;
-            let points=undefined;
             switch(action.payload.keyCode){
                 case 37:{
                     if(!state.maze.cells[state.currentCell[1] + state.currentCell[0] * state.maze.cols][3]
@@ -94,14 +89,12 @@ function reducer(state, action) {
                 }
                 case 38:{
                     if(!state.maze.cells[state.currentCell[1] + state.currentCell[0] * state.maze.cols][0]){
-
                         newCell = [state.currentCell[0]-1,state.currentCell[1]];
                     }
                     break;
                 }
                 case 39:{
                     if(!state.maze.cells[state.currentCell[1] + state.currentCell[0] * state.maze.cols][1]){
-                    
                         newCell = [state.currentCell[0],state.currentCell[1]+1];
                     }
                     break;
@@ -113,49 +106,32 @@ function reducer(state, action) {
                     break;
                 }
             }
-
             return {
                 ...state,
                 currentCell: newCell || state.currentCell,
                 points: newCell ? state.points + 10 : state.points
             }
         }
-        case 'moveDown': {
-            console.log('Down In Reducer')
-            return {
-                ...state,
-                currentCell: [state.currentCell[0]+1,state.currentCell[1]],
-                points:state.points+10
-            }
-        }
-        case 'moveRight': {
-            return {
-                ...state,
-                currentCell: [state.currentCell[0],state.currentCell[1]+1],
-                points:state.points+10
-            }
-        }
-        case 'moveUp': {
-            return {
-                ...state,
-                currentCell: [state.currentCell[0]-1,state.currentCell[1]],
-                points:state.points+10
-            }
-        }            
-        case 'moveLeft': {
-            return {
-                ...state,
-                currentCell: [state.currentCell[0],state.currentCell[1]-1],
-                points:state.points+10
-            }
-        }  
         default:
             throw new Error("Unknown action");
     }
 }
 
+const playAudio = (audioPlayer)=>{ 
+    const audioPromise = audioPlayer.play()
+    if (audioPromise !== undefined) {
+      audioPromise
+        .then(_ => {
+          //audio play started
+        })
+        .catch(err => {
+          // catch dom exception
+          console.info(err)
+        })
+    }
+}
+
 function App() {
-    
     const [state, dispatch] = useReducer(reducer, {
         points: 0,
         round: 1,
@@ -163,25 +139,25 @@ function App() {
         time: undefined,
         maze: undefined,
         currentCell: undefined,
-        levelEnded:false
+        finishLevel:false
     });
  
 
-    const playAudio = ()=>{ 
-        const audioPromise = mazeAudio.play()
-        if (audioPromise !== undefined) {
-          audioPromise
-            .then(_ => {
-              // autoplay started
-            })
-            .catch(err => {
-              // catch dom exception
-              console.info(err)
-            })
+    const handleOnEnterKeyPressed = useCallback(() => {
+        if (!state.time) {
+            dispatch({
+                type: 'startGame',
+                payload: {
+                    maze: new MazeGenerator(ROWS, COLS).generate()
+                }
+            });            
+            playAudio(mazeAudio);
         }
-    }
+    }, [state.time]);
 
-    // const handleOnEnterKeyPressed = useCallback(() => {
+
+
+    // const handleOnEnterKeyPressed =() => {
     //     if (!state.time) {
     //         dispatch({
     //             type: 'startGame',
@@ -190,71 +166,35 @@ function App() {
     //             }
 
     //         });            
-    //         playAudio();
+    //         playAudio(mazeAudio);
     //     }
-    // }, [state.time]);
+    // };
+    // console.log(handleOnEnterKeyPressed.name);
+    
 
-    const handleOnEnterKeyPressed =() => {
-        if (!state.time) {
+    // const handleOnArrowKeyPressed = (keyCode) => {
+    //         if(state.time!==0 && !state.finishLevel ){
+    //             dispatch({
+    //                 type: 'move',
+    //                 payload:{
+    //                     keyCode: keyCode
+    //                 }
+    //             })
+    //         }   
+    // };
+
+    const handleOnArrowKeyPressed = useCallback((keyCode) => {
+        console.log('state.finishLevel',state.finishLevel);
+        console.log('state.points',state.points);
+
+        if(state.time!==0 && !state.finishLevel ){
             dispatch({
-                type: 'startGame',
-                payload: {
-                    maze: new MazeGenerator(ROWS, COLS).generate()
+                type: 'move',
+                payload:{
+                    keyCode: keyCode
                 }
-
-            });            
-            playAudio();
-        }
-    };
-
-    const handleOnArrowKeyPressed = (keyCode) => {
-        console.log(keyCode);
-       // if(state.time!==0 && !state.maze.cells[state.currentCell[1] + state.currentCell[0] * state.maze.cols][2]){
-            if(state.time!==0 && !state.levelEnded ){
-                dispatch({
-                    type: 'move',
-                    payload:{
-                        keyCode: keyCode
-                    }
-                })
-            }   
-        //};
-    };
-
-    const handleOnDownKeyPressed = useCallback(() => {
-        if(state.time!==0 && !state.maze.cells[state.currentCell[1] + state.currentCell[0] * state.maze.cols][2]){
-            dispatch({
-                type: 'moveDown',
             })
-        };
-    }, [state.time]);
-
-    const handleOnRightKeyPressed = useCallback(() => {
-        if(state.time!==0 && !state.maze.cells[state.currentCell[1] + state.currentCell[0] * state.maze.cols][1]){
-            dispatch({
-                type: 'moveRight',
-            });
-        }
-    }, [state.time]);
-
-    const handleOnUpKeyPressed =() => {
-        console.log('currentCell',state.currentCell);
-
-        if(state.time!==0 && !state.maze.cells[state.currentCell[1] + state.currentCell[0] * state.maze.cols][0]){
-            dispatch({
-                type: 'moveUp',
-            });
-        }
-    };
-
-    const handleOnLeftKeyPressed = useCallback(() => {
-        console.log('new',state.currentCell);
-        if(state.time!==0 && !state.maze.cells[state.currentCell[1] + state.currentCell[0] * state.maze.cols][3]
-            && (!(state.currentCell[0]===0&&state.currentCell[1]===0))){
-            dispatch({
-                type: 'moveLeft',
-            });
-        }
+        }   
     }, [state.time]);
 
     useEffect(() => {
@@ -264,7 +204,6 @@ function App() {
                 handleOnEnterKeyPressed();
             }
             else if (keyArrows.includes(e.keyCode)) { 
-                
                 handleOnArrowKeyPressed(e.keyCode);
             }
         };
@@ -277,7 +216,7 @@ function App() {
 
     useInterval(() => {
         dispatch({type: 'decrementTime'})
-    }, (state.time && !state.levelEnded)  ? 1000 : null);
+    }, (state.time && !state.finishLevel)  ? 1000 : null);
 
     useEffect(() => {
         if (state.time === 0) {
@@ -288,15 +227,16 @@ function App() {
 
     useEffect(() => {
         if (state.maze && state.currentCell[0] === state.maze.endCell[0] && state.currentCell[1] === state.maze.endCell[1] ) {
-            dispatch({type: 'levelEnded'});
+            dispatch({type: 'finishLevel'});
             mazeAudio.load();
-            levelEndAudio.play();
+            playAudio(levelEndAudio);
             levelEndAudio.onended = function(){
                 dispatch({type: 'nextRound',
                 payload: {
                     maze: new MazeGenerator(ROWS, COLS).generate(),
                 }});
-                mazeAudio.play();
+                playAudio(mazeAudio);
+                
               }
         }
     }, [state.currentCell]);
@@ -315,6 +255,7 @@ function App() {
                 currentCell={state.currentCell}
                 time={state.time}
                 dispatch={dispatch}
+                finishLevel={state.finishLevel}
             />
             <Notification
                 show={!state.time}
