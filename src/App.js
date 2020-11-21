@@ -10,8 +10,8 @@ import levelEndTune from './audio/level_end.mp3';
 
 
 const ROUND_TIME = 20; //was 60
-const ROWS = 3; //was 17
-const COLS = 5; //was 33
+const ROWS = 17;
+const COLS = 33;
 const mazeAudio=new Audio(mazeTune);
 mazeAudio.loop=true;
 const levelEndAudio=new Audio(levelEndTune);
