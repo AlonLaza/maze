@@ -1,4 +1,4 @@
-import React, {useCallback, useEffect,useRef, useReducer} from 'react';
+import React, {useCallback, useEffect, useReducer} from 'react';
 import styles from './App.module.css';
 import useInterval from "@use-it/interval";
 import Header from './components/Header';
@@ -9,9 +9,9 @@ import mazeTune from './audio/maze.mp3';
 import levelEndTune from './audio/level_end.mp3';
 
 
-const ROUND_TIME = 20; //was 60
-const ROWS = 17;
-const COLS = 33;
+const ROUND_TIME = 60;
+const ROWS = 17; 
+const COLS = 33; 
 const mazeAudio=new Audio(mazeTune);
 mazeAudio.loop=true;
 const levelEndAudio=new Audio(levelEndTune);
@@ -52,7 +52,7 @@ function reducer(state, action) {
                 ...state,
                 hiScore: Math.max(state.hiScore, points),
                 time:Math.max(ROUND_TIME, state.time),
-                currentCell:[0,0],
+                currentCell:action.payload.maze.startCell,
                 round: state.round + 1,
                 points: 0,
                 maze: action.payload.maze,
@@ -74,7 +74,9 @@ function reducer(state, action) {
             }
         }
         case 'move': {
-            if(state.finishLevel) {return state;} //to freeze the logo after finish round.
+            if(state.finishLevel) {  //to freeze the logo after finish round.(before the tune end)
+                return state;
+            }
             let newCell=undefined;
             switch(action.payload.keyCode){
                 case 37:{ //LEFT
@@ -154,7 +156,7 @@ function App() {
     }, [state.time]);
 
     const handleOnArrowKeyPressed = useCallback((keyCode) => {
-        if(state.time!==0 && !state.finishLevel ){
+        if(state.time!==0){
             dispatch({
                 type: 'move',
                 payload:{
