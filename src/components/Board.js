@@ -6,51 +6,18 @@ import lollipopImage from '../images/lollipop.svg';
 import iceCreamImage from '../images/ice_cream.svg';
 
 
-
-import {ROUND_TIME} from '../App.js';
 function Board({ maze, currentCell, time, dispatch, finishLevel }) {
     const canvas = useRef(null);
     const container = useRef(null);
+    const block = useRef({});
+    const logoDrawer = useRef({});
+    const lollipopDrawer = useRef({});
+    const iceCreamDrawer = useRef({});
+
     const [ctx, setCtx] = useState(undefined);
-    const [lollipopObj, setLollipopObj] = useState({
-        firstCreated:false,
-        show:false,
-        col:undefined,
-        row:undefined,
-        showPtsCounter:undefined,
-    });
-    const [iceCreamObj, setIceCreamObj] = useState({
-        firstCreated:false,
-        show:false,
-        col:undefined,
-        row:undefined,
-        showPtsCounter:undefined
-    });
-
-
-    useEffect(() => {
-        if(maze){
-            setLollipopObj(lollipopObj => {
-                return { ...lollipopObj, firstCreated:false,
-                    show:false,
-                    col: 30,
-                    row:14,
-                    showPtsCounter:undefined,}
-              });
-
-            //setLollipopObj({...lollipopObj,col:0});
-            setIceCreamObj({...iceCreamObj,firstCreated:false,
-                show:false,
-                col:0,
-                row:3,
-                showPtsCounter:undefined});
-            //setLollipopCell([ Math.floor(Math.random()*maze.cols), Math.floor(Math.random()*maze.rows)]);
-           
-           
-            //setIceCreamCell([ Math.floor(Math.random()*maze.cols), Math.floor(Math.random()*maze.rows)]);
-        }
-    },[maze,finishLevel]);
-
+    const [lollipopObj, setLollipopObj] = useState({});
+    const [iceCreamObj, setIceCreamObj] = useState({});
+    
     useEffect(() => {
         const fitToContainer = () => {
             const { offsetWidth, offsetHeight } = container.current;
@@ -59,11 +26,58 @@ function Board({ maze, currentCell, time, dispatch, finishLevel }) {
             canvas.current.style.width = offsetWidth + 'px';
             canvas.current.style.height = offsetHeight + 'px';
         };
-
         setCtx(canvas.current.getContext('2d'));
         setTimeout(fitToContainer, 0);
 
     }, []);
+
+    useEffect(() => { //every new maze, initalize the constants, prizes data and images drawers
+        if(maze){
+            setLollipopObj(
+                {
+                    firstCreated: false,
+                    show: false,
+                    col: Math.floor(Math.random()*maze.cols),
+                    row: Math.floor(Math.random()*maze.rows),
+                    showPtsCounter: undefined,
+                    timeToShow:time - 30 
+                }
+              );
+            setIceCreamObj(
+                {
+                firstCreated: false,
+                show:false,
+                col: Math.floor(Math.random()*maze.cols),
+                row: Math.floor(Math.random()*maze.rows),
+                showPtsCounter: undefined,
+                timeToShow: 15
+            });
+
+             block.current.blockWidth = Math.floor(canvas.current.width / maze.cols);
+             block.current.blockHeight = Math.floor(canvas.current.height / maze.rows);
+             block.current.xOffset = Math.floor((canvas.current.width - maze.cols * block.current.blockWidth) / 2);
+             const {blockWidth, blockHeight, xOffset} = block.current;
+             const logoSize = 0.75 * Math.min(blockWidth, blockHeight);
+            
+             const initiateDrawer = (drawerRef, imageSrc, showOnLoad) =>{
+                drawerRef.logoSize=  logoSize; 
+                drawerRef.image  = new Image(logoSize, logoSize);
+                if(showOnLoad){
+                    drawerRef.image.onload = () => {
+                        ctx.drawImage(drawerRef.image, currentCell[1] * blockWidth + xOffset + (blockWidth - logoSize) / 2, currentCell[0] * blockHeight + (blockHeight - logoSize) / 2, logoSize, logoSize);
+                    };
+                }
+                drawerRef.image.src=imageSrc;
+                drawerRef.draw = (currentCell)=>{ctx.drawImage(drawerRef.image, currentCell[1] * blockWidth + xOffset + (blockWidth - logoSize) / 2, currentCell[0] * blockHeight + (blockHeight - logoSize) / 2, logoSize, logoSize)};
+             }
+
+             initiateDrawer(logoDrawer.current, logoImage,true);
+             initiateDrawer(lollipopDrawer.current, lollipopImage,false);
+             initiateDrawer(iceCreamDrawer.current, iceCreamImage,false);
+        }
+    },[maze,finishLevel]);
+
+
 
     useEffect(() => {
         const drawLine = (x1, y1, width, height) => {
@@ -78,13 +92,10 @@ function Board({ maze, currentCell, time, dispatch, finishLevel }) {
             if (!maze) {
                 return;
             }
-
             ctx.fillStyle = 'blue';
             ctx.fillRect(0, 0, canvas.current.width, canvas.current.height);
 
-            const blockWidth = Math.floor(canvas.current.width / maze.cols);
-            const blockHeight = Math.floor(canvas.current.height / maze.rows);
-            const xOffset = Math.floor((canvas.current.width - maze.cols * blockWidth) / 2);
+            const {blockWidth,blockHeight,xOffset} = block.current;
 
             for (let y = 0; y < maze.rows; y++) {
                 for (let x = 0; x < maze.cols; x++) {
@@ -103,27 +114,20 @@ function Board({ maze, currentCell, time, dispatch, finishLevel }) {
                     }
                 }
             }
-            const logoSize = 0.75 * Math.min(blockWidth, blockHeight);
-            const image = new Image(logoSize, logoSize);
-            image.onload = () => {
-                ctx.drawImage(image, currentCell[1] * blockWidth + xOffset + (blockWidth - logoSize) / 2, currentCell[0] * blockHeight + (blockHeight - logoSize) / 2, logoSize, logoSize);
-            };
-
-            image.src = logoImage;
-
+            //drawing the logo
+            logoDrawer.current.draw(currentCell);
+            
             const textSize = Math.min(blockWidth, blockHeight);
             ctx.fillStyle = 'red';
-            ctx.font = '20px "Joystix"';
+            ctx.font = '20px "Joystix"'; 
             ctx.textBaseline = 'top';
-            if(time%2==0){ //make the "GOAL" blinking every even second.
+
+            if(time%2===0){ //draw "GOAL" just on even seconds for blinking.
                 ctx.fillText('Goal', maze.endCell[1] * blockWidth + xOffset + (blockWidth - textSize) / 2, maze.endCell[0] * blockHeight + (blockHeight - textSize) / 2, textSize)
             }
-            
-           
 
             //show lollipop logo
-            if((time===ROUND_TIME-3 && !lollipopObj.firstCreated) || lollipopObj.show ){ //alon* - should be 30!
-
+            if((time===lollipopObj.timeToShow && !lollipopObj.firstCreated) || lollipopObj.show ){
                 if(!lollipopObj.firstCreated){
                     setLollipopObj(lollipopObj => {
                         return { ...lollipopObj, firstCreated:true, show:true }
@@ -131,27 +135,23 @@ function Board({ maze, currentCell, time, dispatch, finishLevel }) {
                 }    
                 if(lollipopObj.col===currentCell[1] && lollipopObj.row===currentCell[0] && lollipopObj.show){
                     setLollipopObj(lollipopObj => {
-                        return { ...lollipopObj,show:false,hitTime:time, showPtsCounter: 3}
+                        return { ...lollipopObj,show:false, showPtsCounter: 3}
                       });
                     dispatch({
                         type: 'hitLollipop',
                     }); 
                 }
-                else{
-                    const lollipopSize = 0.75 * Math.min(blockWidth, blockHeight);
-                    const lollipop = new Image(lollipopSize, lollipopSize);
-                    lollipop.onload = () => {
-                        ctx.drawImage(lollipop, lollipopObj.col * blockWidth + xOffset + (blockWidth - lollipopSize) / 2, lollipopObj.row * blockHeight + (blockHeight - lollipopSize) / 2, lollipopSize, lollipopSize);
-                    };
-                    lollipop.src = lollipopImage;
+                else{ //draw the lollipop image
+                    lollipopDrawer.current.draw([lollipopObj.row,lollipopObj.col]);
                 }
             }
-             //show lollipop Points text for 3 seconds
+             //show lollipop Points
              if(lollipopObj.showPtsCounter>=0){
                 ctx.fillText('+5000', (lollipopObj.col) * blockWidth + xOffset + (blockWidth - textSize) / 2, (lollipopObj.row) * blockHeight + (blockHeight - textSize) / 2, textSize)  
             }
+
            //show iceCream logo
-            if((time===28 && !iceCreamObj.firstCreated) || iceCreamObj.show){
+            if((time===iceCreamObj.timeToShow && !iceCreamObj.firstCreated) || iceCreamObj.show){
                 if(!iceCreamObj.firstCreated){
                     setIceCreamObj(iceCreamObj => {
                         return { ...iceCreamObj, firstCreated:true, show:true }
@@ -164,18 +164,17 @@ function Board({ maze, currentCell, time, dispatch, finishLevel }) {
                     dispatch({
                         type: 'hitIceCream',
                     }); 
+                    if(!lollipopObj.firstCreated){ //if the **lollipop** not yet created , update the time to show the lollipop
+                        setLollipopObj(lollipopObj => {
+                            return { ...lollipopObj, timeToShow: lollipopObj.timeToShow + 30 }
+                          }); 
+                    }
                 }
-                else{
-                    const iceCreamSize = 0.75 * Math.min(blockWidth, blockHeight);
-                    const iceCream = new Image(iceCreamSize, iceCreamSize);
-                    iceCream.onload = () => {
-                        ctx.drawImage(iceCream, iceCreamObj.col * blockWidth + xOffset + (blockWidth - iceCreamSize) / 2, iceCreamObj.row * blockHeight + (blockHeight - iceCreamSize) / 2, iceCreamSize, iceCreamSize);
-                    };
-                    iceCream.src = iceCreamImage;
+                else{ //draw the iceCream image
+                    iceCreamDrawer.current.draw([iceCreamObj.row,iceCreamObj.col]);
                 }
             }
-
-             //show iceCream Points text for 3 seconds
+            //show IceCream points
              if(iceCreamObj.showPtsCounter>=0){
                 ctx.fillText('+10000', (iceCreamObj.col) * blockWidth + xOffset + (blockWidth - textSize) / 2, (iceCreamObj.row) * blockHeight + (blockHeight - textSize) / 2, textSize)
             }
@@ -184,7 +183,7 @@ function Board({ maze, currentCell, time, dispatch, finishLevel }) {
         draw();
     }, [ctx, currentCell, maze, time]);
 
-    useEffect(()=>{
+    useEffect(()=>{ //stop showing the points after 3 seconds
         if(lollipopObj.showPtsCounter>=0){
             setLollipopObj(lollipopObj => {
                 return { ...lollipopObj,showPtsCounter:lollipopObj.showPtsCounter-1 }
